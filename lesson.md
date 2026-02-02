@@ -96,6 +96,7 @@
    ```bash
    git commit -m "feat: initial project structure"
    ```
+   https://www.conventionalcommits.org - соглашение по коммитам
    В `readme.md` вносим заголовок **"Практика по Git"**, добавляем изменения в индекс.
 
 6. **Просмотр истории коммитов**
