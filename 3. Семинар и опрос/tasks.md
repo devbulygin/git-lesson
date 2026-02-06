@@ -1,5 +1,310 @@
 # Задачи для семинара по Java
 
+# Дополнительные задачи (простые, только числа)
+
+## Задача 9: Сумма двух чисел
+**Условие:**
+Даны два числа: 45 и 67. Выведите их сумму.
+```
+112
+```
+
+**Решение:**
+```java
+public class Sum {
+    public static void main(String[] args) {
+        int a = 45;
+        int b = 67;
+        int sum = a + b;
+        
+        System.out.println(sum);
+    }
+}
+```
+
+---
+
+## Задача 10: Площадь прямоугольника
+**Условие:**
+Длина прямоугольника — 12, ширина — 8. Вычислите площадь.
+```
+96
+```
+
+**Решение:**
+```java
+public class Rectangle {
+    public static void main(String[] args) {
+        int length = 12;
+        int width = 8;
+        int area = length * width;
+        
+        System.out.println(area);
+    }
+}
+```
+
+---
+
+## Задача 11: Максимум из двух чисел
+**Условие:**
+Даны два числа: 89 и 156. Выведите большее из них.
+```
+156
+```
+
+**Решение:**
+```java
+public class Max {
+    public static void main(String[] args) {
+        int a = 89;
+        int b = 156;
+        int max;
+        
+        if (a > b) {
+            max = a;
+        } else {
+            max = b;
+        }
+        
+        System.out.println(max);
+    }
+}
+```
+
+---
+
+## Задача 12: Проверка на положительное число
+**Условие:**
+Дано число -15. Если число положительное, выведите 1, если отрицательное — выведите 0, если ноль — выведите 2.
+```
+0
+```
+
+**Решение:**
+```java
+public class CheckPositive {
+    public static void main(String[] args) {
+        int number = -15;
+        int result;
+        
+        if (number > 0) {
+            result = 1;
+        } else if (number < 0) {
+            result = 0;
+        } else {
+            result = 2;
+        }
+        
+        System.out.println(result);
+    }
+}
+```
+
+---
+
+## Задача 13: Чётное или нечётное
+**Условие:**
+Дано число 48. Если число чётное, выведите 1, если нечётное — выведите 0.
+```
+1
+```
+
+**Решение:**
+```java
+public class EvenOdd {
+    public static void main(String[] args) {
+        int number = 48;
+        int result;
+        
+        if (number % 2 == 0) {
+            result = 1;
+        } else {
+            result = 0;
+        }
+        
+        System.out.println(result);
+    }
+}
+```
+
+---
+
+## Задача 14: Среднее арифметическое
+**Условие:**
+Даны три числа: 10, 20, 30. Вычислите среднее арифметическое.
+```
+20.0
+```
+
+**Решение:**
+```java
+public class Average {
+    public static void main(String[] args) {
+        int a = 10;
+        int b = 20;
+        int c = 30;
+        double average = (a + b + c) / 3.0;
+        
+        System.out.println(average);
+    }
+}
+```
+
+---
+
+## Задача 15: Остаток от деления
+**Условие:**
+Даны два числа: 47 и 5. Выведите остаток от деления первого числа на второе.
+```
+2
+```
+
+**Решение:**
+```java
+public class Remainder {
+    public static void main(String[] args) {
+        int a = 47;
+        int b = 5;
+        int remainder = a % b;
+        
+        System.out.println(remainder);
+    }
+}
+```
+
+---
+
+## Задача 16: Удвоение числа
+**Условие:**
+Дано число 123. Удвойте его и выведите результат.
+```
+246
+```
+
+**Решение:**
+```java
+public class Double {
+    public static void main(String[] args) {
+        int number = 123;
+        int result = number * 2;
+        
+        System.out.println(result);
+    }
+}
+```
+
+---
+
+## Задача 17: Абсолютное значение
+**Условие:**
+Дано число -78. Выведите его абсолютное значение (модуль).
+```
+78
+```
+
+**Решение:**
+```java
+public class Absolute {
+    public static void main(String[] args) {
+        int number = -78;
+        int abs;
+        
+        if (number < 0) {
+            abs = -number;
+        } else {
+            abs = number;
+        }
+        
+        System.out.println(abs);
+    }
+}
+```
+
+---
+
+# Дополнительные задачи на проблемные темы
+
+## Задача 18 (Инкремент и декремент): Счётчик
+**Условие:**
+Дано число 10. Примените постфиксный инкремент, затем дважды примените префиксный декремент. Выведите все промежуточные значения.
+```
+10
+11
+10
+9
+```
+
+**Решение:**
+```java
+public class Counter {
+    public static void main(String[] args) {
+        int num = 10;
+        System.out.println(num);
+        
+        int temp = num++;
+        System.out.println(num);
+        
+        System.out.println(--num);
+        System.out.println(--num);
+    }
+}
+```
+
+---
+
+## Задача 19 (Целочисленное деление): Деление на группы
+**Условие:**
+Дано 23 человека. Нужно разделить их на группы по 4 человека. Сколько полных групп получится?
+```
+5
+```
+
+**Решение:**
+```java
+public class Groups {
+    public static void main(String[] args) {
+        int people = 23;
+        int groupSize = 4;
+        int fullGroups = people / groupSize;
+        
+        System.out.println(fullGroups);
+    }
+}
+```
+
+---
+
+## Задача 20 (Остаток от деления): Проверка кратности
+**Условие:**
+Дано число 45. Проверьте, делится ли оно на 3 без остатка. Если да — выведите 1, если нет — выведите 0.
+```
+1
+```
+
+**Решение:**
+```java
+public class Divisible {
+    public static void main(String[] args) {
+        int number = 45;
+        int divisor = 3;
+        int result;
+        
+        if (number % divisor == 0) {
+            result = 1;
+        } else {
+            result = 0;
+        }
+        
+        System.out.println(result);
+    }
+}
+```
+
+---
+
+**Всего: 20 задач** (17 основных + 3 на проблемные темы)
+
 ## Задача 1: Калькулятор чаевых в ресторане
 **Условие:**
 Вы работаете официантом в ресторане. Напишите программу, которая рассчитывает размер чаевых. Сумма счёта — 1250 рублей. Если сумма счёта больше 1000 рублей, чаевые составляют 15%, иначе — 10%. Программа должна вывести:
