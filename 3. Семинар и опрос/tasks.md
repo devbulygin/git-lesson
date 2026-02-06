@@ -218,51 +218,7 @@ public class ATM {
 
 ---
 
-## Задача 8: Определение сезона года
-**Условие:**
-По номеру месяца определите сезон года. Используйте switch. Месяцы: 12, 1, 2 — зима; 3, 4, 5 — весна; 6, 7, 8 — лето; 9, 10, 11 — осень. Сейчас месяц 7 (июль). Программа должна вывести:
-```
-Месяц: 7
-Сезон: Лето
-```
 
-**Решение:**
-```java
-public class SeasonDetector {
-    public static void main(String[] args) {
-        int month = 7;
-        String season;
-        
-        switch (month) {
-            case 12:
-            case 1:
-            case 2:
-                season = "Зима";
-                break;
-            case 3:
-            case 4:
-            case 5:
-                season = "Весна";
-                break;
-            case 6:
-            case 7:
-            case 8:
-                season = "Лето";
-                break;
-            case 9:
-            case 10:
-            case 11:
-                season = "Осень";
-                break;
-            default:
-                season = "Неизвестный месяц";
-        }
-        
-        System.out.println("Месяц: " + month);
-        System.out.println("Сезон: " + season);
-    }
-}
-```
 
 ---
 
