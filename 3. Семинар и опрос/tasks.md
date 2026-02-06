@@ -295,26 +295,6 @@ public class TaxiCalculator {
 
 ---
 
-## Задача 11: Определение високосного года
-**Условие:**
-Год является високосным, если он делится на 4 без остатка, НО не делится на 100, ИЛИ делится на 400. Проверьте год 2024. Программа должна вывести:
-```
-Год: 2024
-Високосный год: да
-```
-
-**Решение:**
-```java
-public class LeapYear {
-    public static void main(String[] args) {
-        int year = 2024;
-        boolean isLeap = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
-        
-        System.out.println("Год: " + year);
-        System.out.println("Високосный год: " + (isLeap ? "да" : "нет"));
-    }
-}
-```
 
 ---
 
