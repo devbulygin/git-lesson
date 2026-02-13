@@ -460,7 +460,7 @@ class Animal {
 }
 
 class Cat extends Animal {
-    String type = "Сфе";
+    String type = "Cat";
 }
 
 Cat cat = new HomeCat();
@@ -560,45 +560,20 @@ if (animal instanceof Cat) {
 
 ---
 
-# 3.7. Перегрузка (Overloading) — полиморфизм компиляции
-
-```java
-class Cat {
-
-    void feed() {
-        System.out.println("Feeding cat");
-    }
-
-    void feed(String food) {
-        System.out.println("Feeding cat with " + food);
-    }
-
-    void feed(String food, int amount) {
-        System.out.println("Feeding " + amount + " portions of " + food);
-    }
-}
-```
-
-Метод выбирается **во время компиляции**.
-
-Это compile-time polymorphism.
-
----
-
-# 3.8. Зачем нужен полиморфизм
+# 3.7. Зачем нужен полиморфизм
 
 Он позволяет писать расширяемый код.
 
 ```java
-void makeCatSpeak(Cat cat) {
-    cat.makeSound();
+void makeAnimaltSpeak(Animal animal) {
+    animal.sayHello();
 }
 ```
 
 Метод не знает:
 
-* `HomeCat`
-* `WildCat`
+* `Cat`
+* `Dog`
 * любой другой наследник
 
 Но работает с любым.
@@ -606,10 +581,10 @@ void makeCatSpeak(Cat cat) {
 Добавим новый класс:
 
 ```java
-class StreetCat extends Cat {
+class Chicken extends Cat {
     @Override
-    void makeSound() {
-        System.out.println("Hiss");
+    void sayHello() {
+        System.out.println("Курица говорит Привет");
     }
 }
 ```
