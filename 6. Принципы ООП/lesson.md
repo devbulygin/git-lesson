@@ -334,8 +334,8 @@ public String toString() {
 
 ```java
 @Override
-public void meow() {
-    System.out.println("Дикий рык!");
+public void say() {
+    System.out.println("Животное говорит привет");
 }
 ```
 
@@ -353,22 +353,6 @@ public void meow() {
 * `static`
 
 ---
-
-## Принцип is-a
-
-Наследование допустимо только если соблюдается отношение **"является"**.
-
-WildCat является Cat ✔
-Cat не является Food ✘
-
-Если отношение "содержит" — используется композиция:
-
-```java
-public class Cat {
-
-    private Collar collar; // has-a
-}
-```
 
 ---
 
@@ -399,9 +383,9 @@ public class Cat {
 ### Базовый класс
 
 ```java
-class Cat {
-    void makeSound() {
-        System.out.println("Some cat sound");
+class Animal {
+    void sayHello() {
+        System.out.println("Животное говорит Привет");
     }
 }
 ```
@@ -411,19 +395,19 @@ class Cat {
 ### Дочерние классы
 
 ```java
-class HomeCat extends Cat {
+class Cat extends Animal {
     @Override
-    void makeSound() {
-        System.out.println("Meow");
+    void sayHello() {
+        System.out.println("Кот говорит Привет");
     }
 }
 ```
 
 ```java
-class WildCat extends Cat {
+class Dog extends Animal {
     @Override
-    void makeSound() {
-        System.out.println("Roar");
+    void sayHello() {
+        System.out.println("Собака говорит Привет");
     }
 }
 ```
@@ -433,19 +417,19 @@ class WildCat extends Cat {
 ### Использование полиморфизма
 
 ```java
-Cat cat1 = new HomeCat();
-Cat cat2 = new WildCat();
+Animal firstAnimal = new Cat();
+Animal secondAnimal = new Dog();
 
-cat1.makeSound(); // Meow
-cat2.makeSound(); // Roar
+firstAnimal.sayHello(); // Кот говорит Привет
+firstAnimal.sayHello(); // Собака говорит Привет
 ```
 
 ---
 
 ### Что здесь происходит?
 
-* Тип переменной: `Cat`
-* Реальный объект: `HomeCat` или `WildCat`
+* Тип переменной: `Animal`
+* Реальный объект: `Cat` или `Dog`
 * JVM во время выполнения определяет, какой метод вызвать
 
 Это называется **динамическое связывание**.
@@ -471,20 +455,20 @@ JVM:
 # 3.3. Важно: поля не полиморфны
 
 ```java
-class Cat {
-    String type = "Cat";
+class Animal {
+    String type = "Animal";
 }
 
-class HomeCat extends Cat {
-    String type = "HomeCat";
+class Cat extends Animal {
+    String type = "Сфе";
 }
 
 Cat cat = new HomeCat();
 System.out.println(cat.type); // Cat
 ```
 
-Поля определяются типом ссылки (`Cat`),
-методы — типом объекта (`HomeCat`).
+Поля определяются типом ссылки (`Animal`),
+методы — типом объекта (`Cat`).
 
 ---
 
@@ -518,20 +502,20 @@ class HomeCat extends Cat {
 # 3.5. Static методы — не полиморфизм
 
 ```java
-class Cat {
+class Animal {
     static void info() {
-        System.out.println("Cat");
+        System.out.println("Animal");
     }
 }
 
-class HomeCat extends Cat {
+class Cat extends Animal {
     static void info() {
-        System.out.println("HomeCat");
+        System.out.println("HoCatmeCat");
     }
 }
 
-Cat cat = new HomeCat();
-cat.info(); // Cat
+Animal animal = new Cat();
+animal.info(); // Animal
 ```
 
 Static методы выбираются по типу ссылки.
@@ -545,7 +529,7 @@ Static методы выбираются по типу ссылки.
 ### Upcasting — безопасно
 
 ```java
-Cat cat = new HomeCat();
+Animal animal = new Cat();
 ```
 
 Ссылка родителя указывает на дочерний объект.
@@ -555,22 +539,22 @@ Cat cat = new HomeCat();
 ### Downcasting — потенциально опасно
 
 ```java
-Cat cat = new HomeCat();
-HomeCat homeCat = (HomeCat) cat; // безопасно
+Animal animal = new Cat();
+Cat cat = (Cat) animal; // безопасно
 ```
 
 Но:
 
 ```java
-Cat cat = new WildCat();
-HomeCat homeCat = (HomeCat) cat; // ClassCastException
+Animal animal = new Dog();
+Cat cat = (Cat) animal; // ClassCastException
 ```
 
 Проверка:
 
 ```java
-if (cat instanceof HomeCat) {
-    HomeCat homeCat = (HomeCat) cat;
+if (animal instanceof Cat) {
+    Cat cat = (Cat) animal;
 }
 ```
 
