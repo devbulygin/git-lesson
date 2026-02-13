@@ -132,6 +132,149 @@ cat.feed(0.2);
 
 # 2. Наследование
 
+Есть:
+
+* **Animal** — общее для всех животных
+* **Cat** и **Dog** — конкретные животные
+
+У всех животных есть:
+
+* `name`
+* `age`
+
+Но:
+
+* у кота есть **любимая игрушка**
+* у собаки есть **уровень дрессировки**
+
+---
+
+## 2. Родитель `Animal`
+
+```java
+public class Animal {
+
+    protected String name;
+    protected int age;
+
+    public Animal(String name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+}
+```
+
+
+* `Animal` — **родитель**
+* Он содержит **только то, что есть у всех**
+* Никаких “кошачьих” или “собачьих” деталей здесь быть не должно
+
+---
+
+## 3. Класс `Cat` — наследник со своим полем
+
+```java
+public class Cat extends Animal {
+
+    private String favoriteToy;
+
+    public Cat(String name, int age, String favoriteToy) {
+        super(name, age);
+        this.favoriteToy = favoriteToy;
+    }
+}
+```
+
+* `Cat extends Animal` → кот **наследует** имя и возраст
+* `favoriteToy` — **уникальное поле кота**
+* Это поле **не имеет смысла** для `Dog` → поэтому его нет в `Animal`
+
+---
+
+## 4. Класс `Dog` — наследник со своим полем
+
+```java
+public class Dog extends Animal {
+
+    private int trainingLevel; // уровень дрессировки
+
+    public Dog(String name, int age, int trainingLevel) {
+        super(name, age);
+        this.trainingLevel = trainingLevel;
+    }
+}
+```
+
+### Объяснение
+
+* `trainingLevel` есть **только у собак**
+* Кот не может иметь уровень дрессировки → значит поле не общее
+
+---
+
+## 5. Конструкторы и `super`
+
+Важно подчеркнуть:
+
+```java
+super(name, age);
+```
+
+👉 означает:
+
+> «Сначала создай **часть Animal**, потом добавь **часть Cat / Dog**»
+
+Порядок создания объекта:
+
+1. Конструктор `Animal`
+2. Конструктор `Cat` или `Dog`
+
+---
+
+## 6. Проверка наследования на практике
+
+```java
+public class Main {
+    public static void main(String[] args) {
+
+        Cat cat = new Cat("Мурка", 3, "Мячик");
+        Dog dog = new Dog("Бобик", 5, 7);
+
+        System.out.println(cat.name); // доступно из Animal
+        System.out.println(dog.age);  // доступно из Animal
+    }
+}
+```
+
+* `Cat` и `Dog` **автоматически получили** поля `name` и `age`
+* Мы их **не объявляли повторно**
+* Это и есть **наследование состояния**
+
+---
+
+## 7. Почему нельзя положить все поля в `Animal`
+
+ Плохой вариант:
+
+```java
+public class Animal {
+    String name;
+    int age;
+    String favoriteToy;
+    int trainingLevel;
+}
+```
+
+Почему плохо:
+
+* У собаки нет любимой игрушки кота
+* У кота нет уровня дрессировки
+* Класс перестаёт быть логичным
+
+👉 **Родитель должен быть максимально универсальным**
+
+---
+
 ## Все классы наследуются от Object
 
 В Java любой класс **неявно наследуется от `Object`**:
@@ -186,45 +329,6 @@ public String toString() {
 
 ---
 
-## Что такое наследование
-
-Наследование — механизм расширения поведения через `extends`.
-
-```java
-public class WildCat extends Cat {
-
-    private boolean aggressive;
-
-    public WildCat(String name, int age, double weight, boolean aggressive) {
-        super(name, age, weight);
-        this.aggressive = aggressive;
-    }
-}
-```
-
----
-
-## Как работает super
-
-`super` используется:
-
-1. Для вызова конструктора родителя
-2. Для обращения к методам родителя
-3. Для обращения к полям родителя
-
-### Вызов конструктора
-
-```java
-super(name, age, weight);
-```
-
-Важно:
-
-* Вызов `super()` должен быть первой строкой конструктора.
-* Если не указать явно — будет вызван `super()` без параметров.
-* Если у родителя нет конструктора без параметров — компилятор выдаст ошибку.
-
----
 
 ## Переопределение методов
 
