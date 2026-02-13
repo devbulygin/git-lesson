@@ -626,17 +626,16 @@ class Chicken extends Cat {
 
 # 4.1. Зачем нужна абстракция
 
-Представим, что у нас есть разные виды `Cat`:
+Представим, что у нас есть разные виды животных `Animal`:
 
-* домашний
-* дикий
-* уличный
+* Кот
+* Собака
+* Курица
 
 У всех есть общее поведение:
 
-* издавать звук
-* есть
-* спать
+* здороваться
+
 
 Но реализация может отличаться.
 
@@ -664,19 +663,8 @@ class Chicken extends Cat {
 ### Пример
 
 ```java
-abstract class Cat {
-
-    protected String name;
-
-    Cat(String name) {
-        this.name = name;
-    }
-
-    abstract void makeSound();
-
-    void sleep() {
-        System.out.println(name + " is sleeping");
-    }
+abstract class Animal {
+    public sayHello();
 }
 ```
 
@@ -684,30 +672,28 @@ abstract class Cat {
 
 ### Что здесь важно
 
-1. Метод `makeSound()` — абстрактный
+1. Метод `say Hellp()` — абстрактный
    → у него нет реализации
    → каждый наследник обязан его реализовать
 
-2. Метод `sleep()` — обычный
-   → общая логика для всех котов
 
-3. Есть поле `name`
-   → у всех котов есть имя
+2. Есть поле `name`
+   → у всех животных есть имя
 
 ---
 
 # 4.3. Реализация абстрактного класса
 
 ```java
-class HomeCat extends Cat {
+class Cat extends Animal {
 
-    HomeCat(String name) {
+    Cat(String name) {
         super(name);
     }
 
     @Override
-    void makeSound() {
-        System.out.println("Meow");
+    void sayHello() {
+        System.out.println("Кошка говорит привет");
     }
 }
 ```
@@ -717,19 +703,18 @@ class HomeCat extends Cat {
 ### Использование
 
 ```java
-Cat cat = new HomeCat("Barsik");
-cat.makeSound();
-cat.sleep();
+Animal animal = new Cat("Barsik");
+cat.sayHello();
 ```
 
-Мы работаем через абстракцию `Cat`.
+Мы работаем через абстракцию `Animal`.
 
 ---
 
 # 4.4. Почему нельзя создать абстрактный класс
 
 ```java
-Cat cat = new Cat("Test"); // ошибка
+Animal animal = new Animal("Test"); // ошибка
 ```
 
 Потому что:
@@ -762,8 +747,8 @@ Cat cat = new Cat("Test"); // ошибка
 ### Пример интерфейса
 
 ```java
-interface Huntable {
-    void hunt();
+interface Flyable {
+    void fly();
 }
 ```
 
@@ -772,20 +757,20 @@ interface Huntable {
 ### Реализация
 
 ```java
-class WildCat extends Cat implements Huntable {
+class Chicken extends Animal implements Flyable {
 
-    WildCat(String name) {
+    Chicken(String name) {
         super(name);
     }
 
     @Override
-    void makeSound() {
-        System.out.println("Roar");
+    void syaHello() {
+        System.out.println("Курица говорит привет");
     }
 
     @Override
-    public void hunt() {
-        System.out.println(name + " is hunting");
+    public void fly() {
+        System.out.println("Курица летит");
     }
 }
 ```
@@ -829,28 +814,3 @@ void processCat(Cat cat) {
 Он работает с абстракцией.
 
 ---
-
-# 4.9. Связь абстракции и полиморфизма
-
-Абстракция отвечает:
-
-> Какие действия доступны?
-
-Полиморфизм отвечает:
-
-> Какая конкретная реализация будет выполнена?
-
-Вместе они образуют основу объектно-ориентированного программирования.
-
----
-
-# 4.10. Ключевая мысль
-
-Абстракция — это способ описать общий тип (`Cat`)
-без привязки к конкретной реализации.
-
-Это инструмент проектирования, который позволяет строить гибкие и расширяемые системы.
-
-
-```
-```
