@@ -323,61 +323,77 @@ Exception in thread "main" java.lang.RuntimeException
 
 # Создание собственных исключений
 
-Мы можем создавать свои исключения.
 
-## Checked-исключение
+Иногда стандартных исключений недостаточно — нужно создать своё, чтобы точнее описать ошибку в предметной области.
+
+### Checked исключение
+
+Наследуйся от `Exception`:
 
 ```java
-public class InvalidValueException extends Exception {
+public class InsufficientFundsException extends Exception {
 
-    public InvalidValueException(String message) {
-        super(message);
+    private final double amount;
+
+    public InsufficientFundsException(double amount) {
+        super("Недостаточно средств. Не хватает: " + amount);
+        this.amount = amount;
+    }
+
+    public double getAmount() {
+        return amount;
     }
 }
 ```
 
-Использование:
+### Unchecked исключение
+
+Наследуйся от `RuntimeException`:
 
 ```java
-public static void unsafeMethod(int value)
-        throws InvalidValueException {
+public class InvalidAgeException extends RuntimeException {
 
-    if (value > 0) {
-        throw new InvalidValueException("Value must be <= 0");
+    public InvalidAgeException(int age) {
+        super("Недопустимый возраст: " + age);
     }
 }
 ```
 
-Теперь вызывающий метод обязан обработать его.
-
----
-
-## Runtime-исключение
+### Использование
 
 ```java
-public class InvalidValueRuntimeException
-        extends RuntimeException {
+public class BankAccount {
 
-    public InvalidValueRuntimeException(String message) {
-        super(message);
+    private double balance;
+
+    public BankAccount(double balance) {
+        this.balance = balance;
     }
+
+    // Checked — вызывающий код обязан обработать
+    public void withdraw(double amount) throws InsufficientFundsException {
+        if (amount > balance) {
+            throw new InsufficientFundsException(amount - balance);
+        }
+        balance -= amount;
+    }
+
+    // Unchecked — ошибка программиста, передан некорректный возраст
+    public static void setAge(int age) {
+        if (age < 0 || age > 150) {
+            throw new InvalidAgeException(age);
+        }
+    }
+}
+
+// Обработка:
+BankAccount account = new BankAccount(100.0);
+try {
+    account.withdraw(200.0);
+} catch (InsufficientFundsException e) {
+    System.out.println(e.getMessage());       // Недостаточно средств. Не хватает: 100.0
+    System.out.println(e.getAmount());        // 100.0
 }
 ```
 
-Использование:
-
-```java
-public static void unsafeMethod(int value) {
-
-    if (value > 0) {
-        throw new InvalidValueRuntimeException(
-                "Value must be <= 0");
-    }
-}
-```
-
-Такое исключение можно не обрабатывать.
-
-
-```
 ```
