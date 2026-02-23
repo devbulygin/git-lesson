@@ -180,3 +180,1383 @@ for (int i = 0; i < array.length; i++) {          // n итераций
 Растёт как **n²** — очень быстро становится неприемлемо медленным.
 
 --
+
+
+# Лекция: List в Java
+
+## Что такое List?
+
+В Java `List` — это **интерфейс** из стандартной библиотеки (`java.util.List`). Он описывает *контракт*: что должна уметь делать любая коллекция, которая называет себя списком. Но как именно это работает внутри — каждая реализация решает сама.
+
+```java
+// List — это интерфейс. Нельзя написать:
+List<String> list = new List<>(); // ❌ ошибка компиляции
+
+// Нужно создать конкретную реализацию:
+List<String> list = new ArrayList<>();  // ✅
+List<String> list = new LinkedList<>(); // ✅
+```
+
+Это важная идея в Java: **программируй на интерфейс, а не на реализацию**. Если объявлять переменную как `List`, а не как `ArrayList`, потом можно легко поменять реализацию в одном месте, не переписывая остальной код.
+
+---
+
+## ArrayList — подробно
+
+### Внутреннее устройство
+
+`ArrayList` — это обёртка над обычным массивом. Внутри него живёт массив объектов (`Object[]`), и когда вы добавляете элементы, ArrayList кладёт их туда по порядку. Упрощённо исходный код выглядит так:
+
+```java
+public class ArrayList<E> {
+    Object[] elementData;  // тот самый внутренний массив
+    int size;              // сколько элементов реально хранится
+
+    private static final int DEFAULT_CAPACITY = 10;
+}
+```
+
+Когда вы пишете `new ArrayList<>()`, Java создаёт пустой массив. При первом `add()` он расширяется до 10 ячеек:
+
+```
+После первого add():
+[ "яблоко" | null | null | null | null | null | null | null | null | null ]
+  size = 1                               capacity = 10
+```
+
+### Механизм роста (resize)
+
+Что происходит, когда массив заполняется полностью?
+
+1. Создаётся **новый массив** размером `oldCapacity * 1.5` (точнее: `oldCapacity + oldCapacity >> 1`)
+2. Все старые элементы копируются в новый массив (`System.arraycopy`)
+3. Кладётся новый элемент
+4. Старый массив уходит в мусор (Garbage Collector уберёт)
+
+```
+До resize:
+[ A | B | C | D | E | F | G | H | I | J ]  capacity = 10, size = 10
+
+После resize при добавлении K:
+[ A | B | C | D | E | F | G | H | I | J | K | null | null | null | null ]
+  capacity = 15, size = 11
+```
+
+Именно поэтому `add()` в конец — **O(1) амортизированно**. Resize происходит редко, и если посчитать суммарную стоимость N операций add и поделить на N, в среднем получается O(1).
+
+Если размер известен заранее — можно задать начальную ёмкость и полностью избежать resize:
+
+```java
+List<String> list = new ArrayList<>(1000); // сразу резервируем 1000 ячеек
+```
+
+### Почему get(index) — O(1)?
+
+Потому что массив в памяти — это непрерывный блок. Адрес нужного элемента считается мгновенно:
+
+```
+адрес элемента = начальный_адрес + индекс * размер_ячейки
+```
+
+Никакого перебора — одна математическая операция.
+
+### Почему add(index, element) в середину — O(n)?
+
+При вставке в позицию 2 нужно сдвинуть все элементы правее:
+
+```
+До:    [ A | B | C | D | E ]
+
+Шаг 1 — сдвигаем всё вправо:
+       [ A | B | C | C | D | E ]
+
+Шаг 2 — кладём X на место:
+       [ A | B | X | C | D | E ]
+```
+
+Чем больше список и чем ближе к началу вставка — тем больше элементов сдвигается. В худшем случае (вставка в начало) сдвигаем все n элементов → **O(n)**.
+
+### Big O для ArrayList
+
+| Операция | Сложность | Почему |
+|---|---|---|
+| `get(index)` | **O(1)** | Прямой доступ по индексу |
+| `add(element)` в конец | **O(1)** амортизированно | Обычно просто кладём в следующую ячейку |
+| `add(index, element)` в середину | **O(n)** | Нужно сдвинуть все элементы правее |
+| `remove(index)` из середины | **O(n)** | Нужно сдвинуть все элементы левее |
+| `contains(element)` | **O(n)** | Перебираем всё по порядку |
+
+---
+
+## LinkedList — подробно
+
+### Внутреннее устройство
+
+`LinkedList` — это **двусвязный список**. Никакого массива нет. Вместо этого каждый элемент хранится в специальном объекте — **узле (Node)**:
+
+```java
+private static class Node<E> {
+    E item;       // значение
+    Node<E> next; // ссылка на следующий узел
+    Node<E> prev; // ссылка на предыдущий узел
+}
+
+public class LinkedList<E> {
+    Node<E> first; // head — первый узел
+    Node<E> last;  // tail — последний узел
+    int size;
+}
+```
+
+Вся структура выглядит как цепочка:
+
+```
+null ← [ prev | "яблоко" | next ] ⇆ [ prev | "банан" | next ] ⇆ [ prev | "вишня" | next ] → null
+               ↑                                                              ↑
+             first (head)                                                  last (tail)
+```
+
+### Добавление в начало — O(1)
+
+```java
+linkedList.addFirst("киви");
+```
+
+Что происходит внутри:
+
+```java
+Node newNode = new Node("киви");
+newNode.next = first;   // новый узел указывает на старый head
+first.prev = newNode;   // старый head указывает назад на новый
+first = newNode;        // первым теперь считается новый узел
+size++;
+```
+
+Не важно, сколько элементов в списке — операция всегда одинаковая. Это и есть **O(1)**.
+
+### Почему get(index) — O(n)?
+
+Никакого прямого доступа нет. Чтобы получить элемент с индексом 5, нужно пройти по цепочке:
+
+```java
+Node current = first;
+for (int i = 0; i < 5; i++) {
+    current = current.next; // прыгаем по ссылкам
+}
+return current.item;
+```
+
+Java немного оптимизирует: если индекс больше `size / 2`, поиск начинается с хвоста и идёт назад. Но в худшем случае это всё равно **O(n)**.
+
+### Удаление из середины
+
+```
+До:    [яблоко] ⇆ [банан] ⇆ [вишня]
+
+Находим узел (O(n)), затем перевешиваем ссылки соседей (O(1)):
+       яблоко.next = вишня
+       вишня.prev  = яблоко
+
+После: [яблоко] ⇆ [вишня]
+       [банан] больше ни на что не ссылается → GC уберёт
+```
+
+Само удаление — O(1). Но найти узел — O(n). Итого: **O(n)**.
+
+### Big O для LinkedList
+
+| Операция | Сложность | Почему |
+|---|---|---|
+| `get(index)` | **O(n)** | Нужно пройти по цепочке от начала |
+| `add(element)` в конец | **O(1)** | Просто вешаем новый узел на tail |
+| `add(element)` в начало | **O(1)** | Просто вешаем новый узел на head |
+| `add(index, element)` в середину | **O(n)** | Сначала нужно дойти до нужного места |
+| `remove()` из начала/конца | **O(1)** | Перевешиваем ссылку |
+| `remove(index)` из середины | **O(n)** | Сначала нужно найти элемент |
+
+---
+
+## Память: ArrayList vs LinkedList
+
+**ArrayList** хранит только сами данные плюс немного пустых ячеек про запас.
+
+**LinkedList** для каждого элемента создаёт отдельный объект `Node` с двумя ссылками — на предыдущий и следующий узел. В 64-битной JVM каждый `Node` занимает примерно **24 байта накладных расходов** сверх самого значения.
+
+```
+ArrayList с 1 000 000 Integer:
+~4 МБ для массива ссылок + данные
+
+LinkedList с 1 000 000 Integer:
+~24 МБ только на Node-объекты + данные
+```
+
+Также у ArrayList лучше **cache locality** — элементы лежат в памяти подряд, процессор читает их блоками и кэширует. У LinkedList узлы разбросаны по памяти хаотично, поэтому даже последовательный перебор на практике медленнее.
+
+---
+
+## Сравнение ArrayList и LinkedList
+
+```java
+// Добавляем элементы в начало — наглядный пример разницы
+List<Integer> arrayList  = new ArrayList<>();
+List<Integer> linkedList = new LinkedList<>();
+
+// ArrayList: каждый раз сдвигает ВСЕ элементы → медленно
+for (int i = 0; i < 1_000_000; i++) {
+    arrayList.add(0, i); // O(n) каждый раз!
+}
+
+// LinkedList: просто перевешивает head → быстро
+for (int i = 0; i < 1_000_000; i++) {
+    linkedList.add(0, i); // O(1) каждый раз
+}
+```
+
+| | ArrayList | LinkedList |
+|---|---|---|
+| Доступ по индексу | ✅ O(1) | ❌ O(n) |
+| Добавление в конец | ✅ O(1) | ✅ O(1) |
+| Добавление в начало | ❌ O(n) | ✅ O(1) |
+| Удаление из начала/конца | ❌ O(n) | ✅ O(1) |
+| Память | ✅ Меньше | ❌ Больше |
+| Cache locality | ✅ Хорошая | ❌ Плохая |
+
+---
+
+## Методы интерфейса List
+
+### Добавление элементов
+
+**`add(E element)`** — добавляет элемент в конец списка:
+
+```java
+List<String> list = new ArrayList<>();
+list.add("яблоко");
+list.add("банан");
+// ["яблоко", "банан"]
+```
+
+**`add(int index, E element)`** — добавляет элемент на конкретную позицию. Всё, что было правее — сдвигается:
+
+```java
+list.add(0, "киви"); // вставляем в начало
+// ["киви", "яблоко", "банан"]
+```
+
+**`addAll(Collection<? extends E> c)`** — добавляет сразу целую коллекцию в конец:
+
+```java
+List<String> extra = List.of("вишня", "груша");
+list.addAll(extra);
+// ["киви", "яблоко", "банан", "вишня", "груша"]
+```
+
+**`addAll(int index, Collection<? extends E> c)`** — добавляет коллекцию, начиная с указанной позиции:
+
+```java
+list.addAll(1, extra); // вставляет с позиции 1, сдвигая остальные
+```
+
+---
+
+### Получение элементов
+
+**`get(int index)`** — возвращает элемент по индексу. Индексы начинаются с 0:
+
+```java
+String first = list.get(0);
+String last  = list.get(list.size() - 1);
+```
+
+Если передать индекс за пределами списка — получите `IndexOutOfBoundsException`.
+
+**`indexOf(Object o)`** — возвращает индекс **первого** вхождения элемента. Если элемента нет — возвращает `-1`:
+
+```java
+List<String> list = new ArrayList<>(List.of("а", "б", "а", "в"));
+list.indexOf("а");   // 0
+list.indexOf("нет"); // -1
+```
+
+**`lastIndexOf(Object o)`** — возвращает индекс **последнего** вхождения:
+
+```java
+list.lastIndexOf("а"); // 2
+```
+
+**`subList(int fromIndex, int toIndex)`** — возвращает **вид** (view) части списка от `fromIndex` включительно до `toIndex` не включительно. Это не копия — изменения в subList отразятся на оригинале:
+
+```java
+List<String> list = new ArrayList<>(List.of("а", "б", "в", "г", "д"));
+List<String> sub = list.subList(1, 4);
+// sub = ["б", "в", "г"]
+
+sub.clear(); // удалит "б", "в", "г" из оригинального list тоже!
+// list = ["а", "д"]
+```
+
+---
+
+### Изменение элементов
+
+**`set(int index, E element)`** — заменяет элемент на указанной позиции. Возвращает старый элемент:
+
+```java
+List<String> list = new ArrayList<>(List.of("яблоко", "банан", "вишня"));
+String old = list.set(1, "груша");
+// old = "банан"
+// list = ["яблоко", "груша", "вишня"]
+```
+
+---
+
+### Удаление элементов
+
+**`remove(int index)`** — удаляет элемент по индексу. Возвращает удалённый элемент:
+
+```java
+String removed = list.remove(0); // удаляем первый
+```
+
+**`remove(Object o)`** — удаляет **первое** вхождение объекта. Возвращает `true`, если элемент был найден:
+
+```java
+list.remove("банан"); // true
+list.remove("нет");   // false
+```
+
+> ⚠️ **Важный нюанс с Integer.** Если у вас `List<Integer>`, то `list.remove(1)` удалит элемент по **индексу** 1, а не число 1. Чтобы удалить именно число — оборачивайте:
+
+```java
+List<Integer> nums = new ArrayList<>(List.of(10, 1, 20, 1));
+nums.remove(1);                  // удалит элемент с индексом 1 → [10, 20, 1]
+nums.remove(Integer.valueOf(1)); // удалит первую единицу  → [10, 20]
+```
+
+**`removeAll(Collection<?> c)`** — удаляет из списка все элементы, которые есть в переданной коллекции:
+
+```java
+List<String> list = new ArrayList<>(List.of("а", "б", "в", "г"));
+list.removeAll(List.of("б", "г"));
+// list = ["а", "в"]
+```
+
+**`retainAll(Collection<?> c)`** — оставляет **только** те элементы, которые есть в переданной коллекции. Всё остальное удаляет:
+
+```java
+List<String> list = new ArrayList<>(List.of("а", "б", "в", "г"));
+list.retainAll(List.of("б", "г"));
+// list = ["б", "г"]
+```
+
+**`clear()`** — удаляет все элементы:
+
+```java
+list.clear();
+list.size(); // 0
+```
+
+---
+
+### Проверки
+
+**`size()`** — возвращает количество элементов:
+
+```java
+list.size(); // 3
+```
+
+**`isEmpty()`** — возвращает `true`, если список пуст:
+
+```java
+list.isEmpty(); // false
+list.clear();
+list.isEmpty(); // true
+```
+
+**`contains(Object o)`** — проверяет наличие элемента. Работает через `equals()`:
+
+```java
+list.contains("банан"); // true или false
+```
+
+**`containsAll(Collection<?> c)`** — проверяет, содержатся ли **все** элементы переданной коллекции:
+
+```java
+List<String> list = new ArrayList<>(List.of("а", "б", "в"));
+list.containsAll(List.of("а", "в")); // true
+list.containsAll(List.of("а", "г")); // false — "г" нет
+```
+
+---
+
+### Перебор и сортировка
+
+**`forEach(Consumer<? super E> action)`** — перебирает каждый элемент и выполняет действие. Удобна с лямбдами:
+
+```java
+list.forEach(element -> System.out.println(element));
+// или через method reference:
+list.forEach(System.out::println);
+```
+
+**`sort(Comparator<? super E> c)`** — сортирует список по заданному компаратору. `null` означает естественный порядок:
+
+```java
+List<String> list = new ArrayList<>(List.of("банан", "яблоко", "вишня"));
+
+list.sort(null);                                     // по алфавиту
+list.sort(Comparator.comparingInt(String::length)); // по длине строки
+list.sort(Comparator.reverseOrder());               // в обратном порядке
+```
+
+**`iterator()`** — возвращает итератор для последовательного перебора. Нужен явно, когда хотите удалять элементы во время перебора:
+
+```java
+Iterator<String> it = list.iterator();
+while (it.hasNext()) {
+    String el = it.next();
+    if (el.equals("банан")) {
+        it.remove(); // ✅ безопасное удаление во время итерации
+    }
+}
+```
+
+> ⚠️ Никогда не удаляйте элементы через `list.remove()` внутри обычного `for-each` — получите `ConcurrentModificationException`. Используйте итератор или `removeIf()`.
+
+**`listIterator()`** — расширенная версия итератора: умеет ходить в **обе стороны** и добавлять элементы во время перебора:
+
+```java
+ListIterator<String> it = list.listIterator(list.size()); // начинаем с конца
+while (it.hasPrevious()) {
+    System.out.println(it.previous()); // идём назад
+}
+```
+
+---
+
+### Удобные методы с лямбдами (Java 8+)
+
+**`removeIf(Predicate<? super E> filter)`** — удаляет все элементы, для которых условие возвращает `true`. Чище и безопаснее, чем удаление через итератор:
+
+```java
+List<Integer> nums = new ArrayList<>(List.of(1, 2, 3, 4, 5, 6));
+nums.removeIf(n -> n % 2 == 0); // удаляем чётные
+// [1, 3, 5]
+```
+
+**`replaceAll(UnaryOperator<E> operator)`** — заменяет каждый элемент результатом применения функции:
+
+```java
+List<String> list = new ArrayList<>(List.of("яблоко", "банан", "вишня"));
+list.replaceAll(String::toUpperCase);
+// ["ЯБЛОКО", "БАНАН", "ВИШНЯ"]
+```
+
+---
+
+### Преобразование
+
+**`toArray()`** — конвертирует список в массив:
+
+```java
+// Возвращает Object[] — неудобно
+Object[] arr1 = list.toArray();
+
+// Лучше так — возвращает String[]
+String[] arr2 = list.toArray(new String[0]);
+```
+
+**`List.of()` и `List.copyOf()`** — фабричные методы для создания списков:
+
+```java
+// Неизменяемый список — нельзя добавлять, удалять, изменять
+List<String> immutable = List.of("а", "б", "в");
+
+// Неизменяемая копия существующей коллекции
+List<String> copy = List.copyOf(existingList);
+
+// Если нужен изменяемый список из готовых данных:
+List<String> mutable = new ArrayList<>(List.of("а", "б", "в"));
+```
+
+---
+
+## Когда что выбирать
+
+**ArrayList** подходит, когда вы часто читаете элементы по индексу и редко вставляете/удаляете в середине. Это самый частый случай.
+
+**LinkedList** стоит рассматривать, когда задача явно требует частых операций с началом или концом списка — например, реализация очереди или истории действий.
+
+```java
+// Часто читаем по индексу → ArrayList
+List<String> log = new ArrayList<>();
+String entry = log.get(42); // O(1)
+
+// Часто добавляем/удаляем с краёв → LinkedList
+List<String> history = new LinkedList<>();
+history.addFirst("действие"); // O(1)
+history.removeFirst();        // O(1)
+```
+
+---
+
+# Лекция: Map и Set в Java
+
+---
+
+## Часть 1. equals() и hashCode()
+
+Прежде чем разбирать Map и Set, нужно разобраться с двумя методами, на которых они полностью построены. Без понимания `equals()` и `hashCode()` невозможно объяснить, почему HashMap работает именно так.
+
+### equals()
+
+`equals()` — это метод класса `Object`, который есть у каждого объекта в Java. Он отвечает на вопрос: **"Эти два объекта одинаковые?"**
+
+По умолчанию `equals()` сравнивает **ссылки** — то есть проверяет, что это буквально один и тот же объект в памяти:
+
+```java
+String a = new String("яблоко");
+String b = new String("яблоко");
+
+a == b;       // false — разные объекты в памяти
+a.equals(b);  // true  — String переопределяет equals() и сравнивает содержимое
+```
+
+Для своих классов `equals()` нужно переопределять вручную. Например:
+
+```java
+class Point {
+    int x, y;
+
+    Point(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;                  // один и тот же объект
+        if (!(o instanceof Point)) return false;     // разные типы
+        Point other = (Point) o;
+        return this.x == other.x && this.y == other.y;
+    }
+}
+
+Point p1 = new Point(1, 2);
+Point p2 = new Point(1, 2);
+
+p1.equals(p2); // true — одинаковые координаты
+```
+
+Контракт `equals()` — правила, которым он обязан следовать:
+
+- **Рефлексивность:** `a.equals(a)` всегда `true`
+- **Симметричность:** если `a.equals(b)`, то `b.equals(a)`
+- **Транзитивность:** если `a.equals(b)` и `b.equals(c)`, то `a.equals(c)`
+- **Согласованность:** несколько вызовов подряд возвращают одно и то же
+- **null:** `a.equals(null)` всегда `false`
+
+### hashCode()
+
+`hashCode()` — тоже метод `Object`. Он возвращает **целое число (int)**, которое является "цифровым отпечатком" объекта. Это число используется для быстрого распределения объектов по бакетам в HashMap и HashSet.
+
+```java
+"яблоко".hashCode()  // например, 1896225
+"банан".hashCode()   // например, -891985903
+"яблоко".hashCode()  // снова 1896225 — всегда одно и то же
+```
+
+По умолчанию `hashCode()` возвращает что-то вроде адреса объекта в памяти — у каждого объекта свой. Для своих классов его тоже нужно переопределять.
+
+### Контракт между equals() и hashCode()
+
+Это самое важное правило, которое Java не проверяет за вас автоматически:
+
+> **Если `a.equals(b)` == `true`, то `a.hashCode()` обязан быть равен `b.hashCode()`.**
+
+Обратное не обязательно: два объекта могут иметь одинаковый хеш, но быть не равными (это называется **коллизия**).
+
+```
+equals → true   ===обязательно===>   hashCode одинаковые
+hashCode одинаковые   ==необязательно==>   equals → true
+```
+
+### Что будет, если нарушить контракт?
+
+**Случай 1: переопределили `equals()`, но не `hashCode()`**
+
+```java
+class BadPoint {
+    int x, y;
+
+    @Override
+    public boolean equals(Object o) { /* сравниваем x и y */ }
+    // hashCode() НЕ переопределён → возвращает адрес объекта
+}
+
+BadPoint p1 = new BadPoint(1, 2);
+BadPoint p2 = new BadPoint(1, 2);
+
+p1.equals(p2);    // true  — объекты "одинаковые"
+p1.hashCode();    // 12345 — адрес p1
+p2.hashCode();    // 67890 — адрес p2 (другой объект!)
+
+Map<BadPoint, String> map = new HashMap<>();
+map.put(p1, "точка");
+map.get(p2); // null! — разные хеши → разные бакеты → ключ не найден
+```
+
+**Случай 2: `hashCode()` всегда возвращает одно число**
+
+```java
+class LazyPoint {
+    int x, y;
+
+    @Override
+    public boolean equals(Object o) { /* нормальный equals */ }
+
+    @Override
+    public int hashCode() { return 42; } // всегда 42
+}
+```
+
+Контракт не нарушен, но HashMap превращается в один длинный список — все элементы попадают в один бакет. Производительность деградирует до **O(n)**.
+
+### Как правильно реализовывать hashCode()?
+
+Хороший `hashCode()` должен равномерно распределять объекты. Самый простой способ — использовать `Objects.hash()`:
+
+```java
+import java.util.Objects;
+
+class Point {
+    int x, y;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Point)) return false;
+        Point other = (Point) o;
+        return this.x == other.x && this.y == other.y;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(x, y); // использует все поля, что участвуют в equals()
+    }
+}
+```
+
+**Правило:** в `hashCode()` должны участвовать **те же поля**, что и в `equals()`. Не больше и не меньше.
+
+Современные IDE (IntelliJ, Eclipse) и библиотеки (Lombok с `@EqualsAndHashCode`, Records в Java 16+) умеют генерировать оба метода автоматически.
+
+---
+
+## Часть 2. Map
+
+### Что такое Map?
+
+`Map` — это интерфейс, который описывает коллекцию пар **ключ → значение**. Каждый ключ уникален, и по нему можно найти значение. Это как словарь: слово (ключ) → определение (значение).
+
+```java
+// Map — это интерфейс, нельзя создать напрямую:
+Map<String, Integer> map = new Map<>(); // ❌ ошибка компиляции
+
+// Нужна конкретная реализация:
+Map<String, Integer> map = new HashMap<>();       // ✅ самая частая
+Map<String, Integer> map = new LinkedHashMap<>(); // ✅ с порядком вставки
+Map<String, Integer> map = new TreeMap<>();       // ✅ с сортировкой
+```
+
+---
+
+### HashMap — подробно
+
+#### Идея: что такое хеширование?
+
+Представьте, что у вас 16 пронумерованных ящиков (0–15). Вы хотите положить пару `"яблоко" → 42` так, чтобы потом мгновенно найти её по ключу.
+
+Идея: **вычислить номер ящика из самого ключа** через `hashCode()`:
+
+```java
+"яблоко".hashCode() // → 1896225
+1896225 % 16        // → 1  (берём остаток от деления на количество ящиков)
+```
+
+Кладём пару в ящик №1. При поиске — снова считаем хеш, снова берём остаток — и сразу идём в нужный ящик. Это и есть **O(1)**.
+
+#### Внутреннее устройство
+
+HashMap внутри — это массив узлов. Каждая ячейка массива называется **бакет (bucket)**:
+
+```java
+// Упрощённо, внутри HashMap:
+public class HashMap<K, V> {
+    Node<K,V>[] table;  // массив бакетов
+    int size;           // количество пар ключ-значение
+    float loadFactor;   // коэффициент загрузки (по умолчанию 0.75)
+    int threshold;      // порог для resize = capacity * loadFactor
+}
+
+static class Node<K,V> {
+    int hash;        // кешированный хеш ключа
+    K key;
+    V value;
+    Node<K,V> next;  // ссылка на следующий узел в том же бакете
+}
+```
+
+По умолчанию таблица создаётся на **16 бакетов**:
+
+```
+Индекс:  0     1            2     3    ...   15
+         |     |            |     |           |
+        null  [яблоко→42]  null  null  ...  null
+```
+
+#### Как работает put()
+
+```java
+map.put("яблоко", 42);
+```
+
+**Шаг 1 — вычисляем хеш ключа:**
+
+```java
+int hash = key.hashCode(); // 1896225
+// HashMap дополнительно перемешивает хеш для лучшего распределения:
+hash = hash ^ (hash >>> 16);
+```
+
+**Шаг 2 — определяем номер бакета:**
+
+```java
+int index = hash & (capacity - 1); // быстрый аналог hash % capacity
+// например: index = 1
+```
+
+**Шаг 3 — кладём Node в бакет:**
+
+```
+table[1] → [hash=... | "яблоко" | 42 | next=null]
+```
+
+Добавим ещё пару:
+
+```java
+map.put("банан", 7); // хеш → index = 5
+```
+
+```
+Индекс:  0     1             2     3     4     5           ...
+        null  [яблоко→42]   null  null  null  [банан→7]   ...
+```
+
+#### Коллизия — когда два ключа попадают в один бакет
+
+Если два разных ключа дали одинаковый индекс — это **коллизия**. HashMap решает её методом **chaining**: узлы в одном бакете связываются в список:
+
+```java
+map.put("яблоко",   42); // → бакет 1
+map.put("апельсин", 99); // → тоже бакет 1 (коллизия!)
+```
+
+```
+Бакет 1: [яблоко→42] → [апельсин→99] → null
+```
+
+При `map.get("апельсин")` HashMap:
+1. Вычисляет хеш → идёт в бакет 1
+2. Сравнивает: `"яблоко".equals("апельсин")` → false
+3. Следующий: `"апельсин".equals("апельсин")` → true ✅
+
+Именно здесь и нужен правильный `equals()` — без него HashMap не найдёт ключ даже в нужном бакете.
+
+#### Превращение в дерево (Java 8+)
+
+Если в одном бакете накапливается **8 и более узлов**, HashMap превращает список в **красно-чёрное дерево**:
+
+```
+До (список, O(n) для поиска):
+бакет 3: [А] → [Б] → [В] → [Г] → [Д] → [Е] → [Ж] → [З] → null
+
+После (дерево, O(log n) для поиска):
+бакет 3:      [Д]
+             /    \
+           [Б]    [Ж]
+           / \    / \
+          [А][В][Е] [З]
+               \
+               [Г]
+```
+
+Обратно в список дерево превращается, когда узлов становится меньше **6**.
+
+#### Механизм роста (resize)
+
+HashMap следит за **коэффициентом загрузки (load factor)** — отношением количества элементов к количеству бакетов. По умолчанию он равен **0.75**:
+
+```
+threshold = capacity * loadFactor = 16 * 0.75 = 12
+```
+
+Как только добавляется **12-й элемент** — происходит resize:
+
+1. Создаётся новый массив **в 2 раза больше** (32 бакета)
+2. Все узлы **перехешируются** и раскладываются по новым бакетам
+3. Старый массив уходит в мусор
+
+```
+До resize:    16 бакетов, 12 элементов
+После resize: 32 бакета,  новый порог = 32 * 0.75 = 24
+```
+
+Resize — дорогая операция O(n), но происходит редко. Если размер известен заранее — лучше задать начальную ёмкость сразу:
+
+```java
+// Планируем хранить ~1000 элементов: 1000 / 0.75 ≈ 1334 → берём ближайшую степень 2
+Map<String, Integer> map = new HashMap<>(2048);
+```
+
+#### Big O для HashMap
+
+| Операция | Среднее | Худший случай (Java 8+) |
+|---|---|---|
+| `put(key, value)` | **O(1)** | O(log n) — всё в одном бакете (дерево) |
+| `get(key)` | **O(1)** | O(log n) |
+| `remove(key)` | **O(1)** | O(log n) |
+| `containsKey(key)` | **O(1)** | O(log n) |
+| `containsValue(v)` | **O(n)** | O(n) — всегда перебор |
+
+---
+
+### LinkedHashMap
+
+`LinkedHashMap` — это `HashMap` с дополнительным двусвязным списком, который проходит через все узлы и запоминает **порядок вставки**:
+
+```
+Бакеты (для быстрого доступа по ключу):
+бакет 1: [яблоко→42]
+бакет 5: [банан→7]
+бакет 9: [вишня→15]
+
+Двусвязный список (для сохранения порядка):
+[яблоко→42] ⇆ [банан→7] ⇆ [вишня→15]
+   head                        tail
+```
+
+```java
+Map<String, Integer> map = new LinkedHashMap<>();
+map.put("вишня", 15);
+map.put("яблоко", 42);
+map.put("банан", 7);
+
+map.forEach((k, v) -> System.out.println(k));
+// вишня, яблоко, банан — всегда в порядке вставки
+```
+
+Также можно создать LinkedHashMap в **режиме LRU** — порядок по последнему обращению вместо порядка вставки:
+
+```java
+// true = порядок по последнему доступу (access-order)
+Map<String, Integer> lru = new LinkedHashMap<>(16, 0.75f, true);
+```
+
+**Big O:** такой же как у HashMap — O(1) для основных операций. Небольшие накладные расходы памяти на дополнительные ссылки.
+
+**Когда использовать:** когда важен порядок вставки — кеш, история действий, конфигурация.
+
+---
+
+### TreeMap
+
+`TreeMap` хранит пары в **красно-чёрном дереве**, отсортированном по ключу:
+
+```java
+Map<String, Integer> map = new TreeMap<>();
+map.put("вишня", 15);
+map.put("яблоко", 42);
+map.put("банан", 7);
+
+map.forEach((k, v) -> System.out.println(k));
+// банан, вишня, яблоко — всегда в алфавитном порядке
+```
+
+TreeMap реализует расширенный интерфейс `NavigableMap` с мощными методами навигации:
+
+```java
+TreeMap<String, Integer> map = new TreeMap<>();
+// ...добавляем элементы...
+
+map.firstKey();            // минимальный ключ
+map.lastKey();             // максимальный ключ
+map.floorKey("вишня");     // ключ ≤ "вишня"
+map.ceilingKey("вишня");   // ключ ≥ "вишня"
+map.lowerKey("вишня");     // ключ строго < "вишня"
+map.higherKey("вишня");    // ключ строго > "вишня"
+
+map.subMap("банан", "яблоко"); // от "банан" включительно до "яблоко" не включительно
+map.headMap("вишня");          // всё строго до "вишня"
+map.tailMap("вишня");          // всё начиная с "вишня"
+```
+
+**Big O:** все операции — **O(log n)**.
+
+**Важно:** ключи должны реализовывать `Comparable`, или нужно передать `Comparator` в конструктор:
+
+```java
+Map<String, Integer> map = new TreeMap<>(Comparator.reverseOrder()); // по убыванию
+```
+
+**Когда использовать:** когда нужна сортировка по ключу или диапазонные запросы — расписание, прайс-лист, временные ряды.
+
+---
+
+### Сравнение реализаций Map
+
+| | HashMap | LinkedHashMap | TreeMap |
+|---|---|---|---|
+| Порядок | ❌ Случайный | ✅ Порядок вставки | ✅ Отсортированный |
+| `get` / `put` | **O(1)** | **O(1)** | O(log n) |
+| `null` ключ | ✅ Один | ✅ Один | ❌ Нельзя |
+| Память | Меньше | Больше (доп. ссылки) | Больше (дерево) |
+| Навигация по диапазонам | ❌ | ❌ | ✅ |
+
+---
+
+### Методы Map
+
+#### Добавление и изменение
+
+**`put(K key, V value)`** — добавляет пару. Если ключ уже есть — перезаписывает. Возвращает старое значение (или `null`):
+
+```java
+map.put("яблоко", 42);
+Integer old = map.put("яблоко", 99); // old = 42
+```
+
+**`putIfAbsent(K key, V value)`** — добавляет только если ключа ещё нет:
+
+```java
+map.putIfAbsent("яблоко", 100); // ключ есть → ничего не меняется
+map.putIfAbsent("груша", 5);    // ключа нет → добавляется
+```
+
+**`putAll(Map<? extends K, ? extends V> m)`** — добавляет все пары из другой Map:
+
+```java
+map.putAll(Map.of("слива", 3, "груша", 8));
+```
+
+**`replace(K key, V value)`** — заменяет значение только если ключ существует:
+
+```java
+map.replace("яблоко", 200); // есть → заменит
+map.replace("нет", 200);    // нет  → ничего не произойдёт, вернёт null
+```
+
+**`replace(K key, V oldValue, V newValue)`** — заменяет только если текущее значение совпадает:
+
+```java
+map.replace("яблоко", 99, 42); // заменит только если значение сейчас == 99
+```
+
+**`compute(K key, BiFunction<K, V, V> fn)`** — вычисляет новое значение на основе старого. Если функция вернёт `null` — ключ удаляется:
+
+```java
+// Счётчик слов:
+map.compute("яблоко", (key, val) -> val == null ? 1 : val + 1);
+```
+
+**`computeIfAbsent(K key, Function<K, V> fn)`** — вычисляет значение только если ключа нет. Удобно для вложенных коллекций:
+
+```java
+Map<String, List<String>> groups = new HashMap<>();
+groups.computeIfAbsent("фрукты", k -> new ArrayList<>()).add("яблоко");
+groups.computeIfAbsent("фрукты", k -> new ArrayList<>()).add("банан");
+// groups = {фрукты=[яблоко, банан]}
+```
+
+**`computeIfPresent(K key, BiFunction<K, V, V> fn)`** — вычисляет новое значение только если ключ есть:
+
+```java
+map.computeIfPresent("яблоко", (key, val) -> val * 2);
+```
+
+**`merge(K key, V value, BiFunction<V, V, V> fn)`** — если ключа нет — кладёт `value`, если есть — применяет функцию:
+
+```java
+// Элегантный счётчик:
+map.merge("яблоко", 1, Integer::sum);
+// нет "яблоко" → put("яблоко", 1)
+// есть "яблоко" → put("яблоко", старое + 1)
+```
+
+#### Получение
+
+**`get(Object key)`** — возвращает значение или `null`:
+
+```java
+Integer val = map.get("яблоко");
+```
+
+**`getOrDefault(Object key, V defaultValue)`** — возвращает значение или дефолт:
+
+```java
+Integer val = map.getOrDefault("нет", 0); // 0 вместо null
+```
+
+#### Удаление
+
+**`remove(Object key)`** — удаляет по ключу, возвращает удалённое значение:
+
+```java
+Integer removed = map.remove("яблоко");
+```
+
+**`remove(Object key, Object value)`** — удаляет только если значение совпадает:
+
+```java
+map.remove("яблоко", 42); // удалит только если значение == 42
+```
+
+**`clear()`** — удаляет все пары.
+
+#### Проверки
+
+**`containsKey(Object key)`** — проверяет наличие ключа. O(1) для HashMap:
+
+```java
+map.containsKey("яблоко"); // true или false
+```
+
+**`containsValue(Object value)`** — проверяет наличие значения. Всегда O(n):
+
+```java
+map.containsValue(42);
+```
+
+**`size()`** и **`isEmpty()`** — количество пар и проверка на пустоту.
+
+#### Перебор
+
+**`keySet()`** — возвращает `Set` всех ключей:
+
+```java
+for (String key : map.keySet()) { ... }
+```
+
+**`values()`** — возвращает `Collection` всех значений:
+
+```java
+for (Integer val : map.values()) { ... }
+```
+
+**`entrySet()`** — самый эффективный способ перебрать и ключи, и значения:
+
+```java
+for (Map.Entry<String, Integer> entry : map.entrySet()) {
+    System.out.println(entry.getKey() + " → " + entry.getValue());
+}
+
+// или с лямбдой:
+map.forEach((key, value) -> System.out.println(key + " → " + value));
+```
+
+#### Фабричные методы (Java 9+)
+
+```java
+// Неизменяемая Map:
+Map<String, Integer> immutable = Map.of("яблоко", 42, "банан", 7);
+
+// Если пар много:
+Map<String, Integer> map = Map.ofEntries(
+    Map.entry("яблоко", 42),
+    Map.entry("банан",  7),
+    Map.entry("вишня",  15)
+);
+
+// Неизменяемая копия:
+Map<String, Integer> copy = Map.copyOf(existingMap);
+
+// Изменяемая Map из готовых данных:
+Map<String, Integer> mutable = new HashMap<>(Map.of("яблоко", 42));
+```
+
+---
+
+### Практические сценарии с Map
+
+**Подсчёт количества вхождений:**
+
+```java
+String[] words = {"яблоко", "банан", "яблоко", "вишня", "банан", "яблоко"};
+
+Map<String, Integer> counts = new HashMap<>();
+for (String word : words) {
+    counts.merge(word, 1, Integer::sum);
+}
+// {яблоко=3, банан=2, вишня=1}
+```
+
+**Группировка элементов:**
+
+```java
+List<String> fruits = List.of("яблоко", "банан", "авокадо", "вишня", "брусника");
+
+Map<Character, List<String>> byLetter = new HashMap<>();
+for (String fruit : fruits) {
+    byLetter.computeIfAbsent(fruit.charAt(0), k -> new ArrayList<>()).add(fruit);
+}
+// {я=[яблоко], б=[банан, брусника], а=[авокадо], в=[вишня]}
+```
+
+**LRU-кеш:**
+
+```java
+Map<String, String> lruCache = new LinkedHashMap<>(16, 0.75f, true) {
+    @Override
+    protected boolean removeEldestEntry(Map.Entry<String, String> eldest) {
+        return size() > 100; // максимум 100 элементов
+    }
+};
+```
+
+---
+
+## Часть 3. Set
+
+### Что такое Set?
+
+`Set` — это интерфейс, который описывает коллекцию **уникальных** элементов. Как `List`, но без дубликатов и без гарантированного порядка (в большинстве реализаций).
+
+```java
+Set<String> set = new HashSet<>();       // ✅ самая частая
+Set<String> set = new LinkedHashSet<>();  // ✅ с порядком вставки
+Set<String> set = new TreeSet<>();        // ✅ с сортировкой
+```
+
+### Связь Set и Map
+
+`HashSet` — это буквально `HashMap`, где значение всегда одна и та же заглушка:
+
+```java
+// Внутри HashSet:
+private static final Object PRESENT = new Object(); // заглушка-значение
+private HashMap<E, Object> map;
+
+public boolean add(E e) {
+    return map.put(e, PRESENT) == null;
+}
+
+public boolean contains(Object o) {
+    return map.containsKey(o);
+}
+```
+
+Элемент Set — это ключ в HashMap, а значение всегда `PRESENT`. Поэтому всё, что вы знаете про HashMap — напрямую применимо к HashSet, включая требования к `equals()` и `hashCode()`.
+
+---
+
+### HashSet
+
+```java
+Set<String> set = new HashSet<>();
+set.add("яблоко"); // true
+set.add("банан");  // true
+set.add("яблоко"); // false — дубликат, игнорируется!
+
+set.size(); // 2
+```
+
+Порядок элементов не гарантирован — зависит от хешей:
+
+```
+Бакеты внутри HashSet:
+бакет 1: ["яблоко"]
+бакет 5: ["банан"]
+// при переборе порядок непредсказуем
+```
+
+**Big O:** как у HashMap — O(1) для `add`, `remove`, `contains`.
+
+---
+
+### LinkedHashSet
+
+Запоминает порядок вставки. Под капотом — `LinkedHashMap`:
+
+```java
+Set<String> set = new LinkedHashSet<>();
+set.add("вишня");
+set.add("яблоко");
+set.add("банан");
+set.add("вишня"); // дубликат — игнорируется, порядок не меняется
+
+set.forEach(System.out::println);
+// вишня, яблоко, банан — всегда в порядке вставки
+```
+
+**Big O:** O(1) для основных операций.
+
+---
+
+### TreeSet
+
+Хранит элементы в отсортированном порядке. Под капотом — `TreeMap`:
+
+```java
+Set<String> set = new TreeSet<>();
+set.add("вишня");
+set.add("яблоко");
+set.add("банан");
+
+set.forEach(System.out::println);
+// банан, вишня, яблоко — всегда в алфавитном порядке
+```
+
+Реализует `NavigableSet` с методами навигации:
+
+```java
+TreeSet<Integer> set = new TreeSet<>(Set.of(1, 3, 5, 7, 9));
+
+set.first();         // 1 — минимальный
+set.last();          // 9 — максимальный
+set.floor(6);        // 5 — ≤ 6
+set.ceiling(6);      // 7 — ≥ 6
+set.lower(5);        // 3 — строго < 5
+set.higher(5);       // 7 — строго > 5
+set.subSet(3, 8);    // [3, 5, 7]
+set.headSet(5);      // [1, 3]
+set.tailSet(5);      // [5, 7, 9]
+```
+
+**Big O:** O(log n) для всех операций.
+
+---
+
+### Сравнение реализаций Set
+
+| | HashSet | LinkedHashSet | TreeSet |
+|---|---|---|---|
+| Порядок | ❌ Случайный | ✅ Порядок вставки | ✅ Отсортированный |
+| `add` / `contains` | **O(1)** | **O(1)** | O(log n) |
+| `null` элемент | ✅ Один | ✅ Один | ❌ Нельзя |
+| Память | Меньше | Больше | Больше |
+| Навигация по диапазонам | ❌ | ❌ | ✅ |
+
+---
+
+### Методы Set
+
+**`add(E element)`** — добавляет элемент. Возвращает `false`, если элемент уже был:
+
+```java
+set.add("яблоко"); // true
+set.add("яблоко"); // false
+```
+
+**`remove(Object o)`** — удаляет элемент:
+
+```java
+set.remove("яблоко"); // true если был, false если нет
+```
+
+**`contains(Object o)`** — проверяет наличие:
+
+```java
+set.contains("банан"); // true или false
+```
+
+**`addAll(Collection<? extends E> c)`** — объединение множеств (union):
+
+```java
+Set<String> a = new HashSet<>(Set.of("а", "б", "в"));
+Set<String> b = new HashSet<>(Set.of("в", "г", "д"));
+a.addAll(b);
+// a = {а, б, в, г, д}
+```
+
+**`retainAll(Collection<?> c)`** — пересечение множеств (intersection):
+
+```java
+Set<String> a = new HashSet<>(Set.of("а", "б", "в"));
+Set<String> b = new HashSet<>(Set.of("б", "в", "г"));
+a.retainAll(b);
+// a = {б, в}
+```
+
+**`removeAll(Collection<?> c)`** — разность множеств (difference):
+
+```java
+Set<String> a = new HashSet<>(Set.of("а", "б", "в"));
+Set<String> b = new HashSet<>(Set.of("б", "в", "г"));
+a.removeAll(b);
+// a = {а}
+```
+
+**`containsAll(Collection<?> c)`** — проверяет, является ли переданная коллекция подмножеством:
+
+```java
+a.containsAll(Set.of("а", "б")); // true
+a.containsAll(Set.of("а", "г")); // false
+```
+
+**`size()`, `isEmpty()`, `clear()`, `forEach()`, `toArray()`, `iterator()`** — работают так же, как в `List`.
+
+**Фабричные методы:**
+
+```java
+Set<String> immutable = Set.of("а", "б", "в");           // неизменяемый
+Set<String> copy      = Set.copyOf(existingSet);          // неизменяемая копия
+Set<String> mutable   = new HashSet<>(Set.of("а", "б")); // изменяемый
+```
+
+---
+
+### Практические сценарии с Set
+
+**Удаление дубликатов с сохранением порядка:**
+
+```java
+List<String> withDupes = List.of("а", "б", "а", "в", "б", "г");
+
+// LinkedHashSet убирает дубликаты и сохраняет порядок
+List<String> result = new ArrayList<>(new LinkedHashSet<>(withDupes));
+// ["а", "б", "в", "г"]
+```
+
+**Быстрая проверка принадлежности:**
+
+```java
+// Вместо перебора списка (O(n)):
+List<String> banned = List.of("спам", "реклама", "запрещено");
+boolean isBanned = banned.contains(word); // O(n) каждый раз
+
+// Используем Set (O(1)):
+Set<String> bannedSet = new HashSet<>(List.of("спам", "реклама", "запрещено"));
+boolean isBanned = bannedSet.contains(word); // O(1)
+```
+
+**Операции над множествами:**
+
+```java
+Set<String> backend  = new HashSet<>(Set.of("Иван", "Мария", "Пётр"));
+Set<String> frontend = new HashSet<>(Set.of("Мария", "Анна", "Пётр"));
+
+// Кто работает в обоих командах?
+Set<String> both = new HashSet<>(backend);
+both.retainAll(frontend); // {Мария, Пётр}
+
+// Кто работает только в backend?
+Set<String> onlyBackend = new HashSet<>(backend);
+onlyBackend.removeAll(frontend); // {Иван}
+
+// Все уникальные сотрудники:
+Set<String> all = new HashSet<>(backend);
+all.addAll(frontend); // {Иван, Мария, Пётр, Анна}
+```
+
+---
